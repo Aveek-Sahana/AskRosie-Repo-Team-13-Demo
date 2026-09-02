@@ -2,6 +2,15 @@
 
 AskRosie is deployed as one HTTPS Node web service. The React browser application calls same-origin `/api/*` routes; only the server calls Groq and NVIDIA. Provider credentials never enter the browser bundle.
 
+## Deploy with Vercel
+
+The public URL `https://ask-rosie-repo-team-13-demo.vercel.app/` is a Vercel deployment. This repository now includes deployable Vercel Node functions in `api/` for chat, artwork classification, title recovery, and word moderation.
+
+1. In the Vercel project **Settings → Environment Variables**, add encrypted server-only values for `GROQ_API_KEY`, `NVIDIA_API_KEY`, and `ALLOWED_ORIGIN`.
+2. Set `ALLOWED_ORIGIN` exactly to `https://ask-rosie-repo-team-13-demo.vercel.app` (no trailing slash).
+3. Redeploy the current `main` branch. Do not create variables with a `VITE_` prefix.
+4. Confirm `POST /api/resolve-artwork` returns HTTP 200 and `POST /api/chat` returns HTTP 200 from the deployed URL before sharing the QR code.
+
 ## Deploy with Render
 
 1. In Render, select **New → Blueprint** and connect `Aveek-Sahana/AskRosie-Repo-Team-13-Demo`.

@@ -144,13 +144,17 @@ export default function App() {
       setCandidateArtwork(matchedArtwork)
       setMessages([])
       setResolutionError('')
+      if (matchedArtwork) {
+        setArtwork(matchedArtwork)
+        go('chat')
+      } else go('confirm')
     } catch {
       setVisionImage('')
       setCandidateArtwork(null)
       setMessages([])
+      go('confirm')
     } finally {
       setProcessing(false)
-      go('confirm')
     }
   }
   const choosePhoto = async (event) => {
@@ -245,7 +249,7 @@ export default function App() {
       const next = [...words, word]; localStorage.setItem(WORDS_KEY, JSON.stringify(next)); setWords(next); setFeeling(''); setFeelingStatus(`“${word}” joined the cloud.`); setTimeout(() => setFeelingDismissed(true), 1400)
     } catch { setFeelingStatus('Rosie couldn’t check that word right now, so it wasn’t added.') } finally { setModeratingFeeling(false) }
   }
-  const shell = (content) => <main className={`app-shell ${screen}`}><Header onHome={() => { stopCamera(); go('welcome') }} />{content}<input ref={photoInput} className="file-input" type="file" accept="image/*" onChange={choosePhoto}/></main>
+  const shell = (content) => <main className={`app-shell ${screen}`}><Header onHome={() => { stopCamera(); go('welcome') }} />{content}<p className="demo-notice">This application is for demo purposes only.</p><input ref={photoInput} className="file-input" type="file" accept="image/*" onChange={choosePhoto}/></main>
 
   if (screen === 'welcome') return shell(<section className="welcome-new"><span className="eyebrow">Your museum, in conversation</span><h1>Meet art with<br/><em>Rosie.</em></h1><p>Photograph an artwork, follow your curiosity, and discover a little more together.</p><div className="welcome-actions"><Primary onClick={() => quizSession ? go('capture') : go('quiz')}>{quizSession ? 'Continue your visit' : 'Personalize my visit'}</Primary><button className="text-button" onClick={skipQuiz}>Skip to artwork chat →</button></div><p className="privacy-note">No tracking user data. Insights on artwork may be referred to other guests.</p></section>)
   if (screen === 'quiz') { const q = quizQuestions[quizStep]; return shell(<section className="quiz"><div className="quiz-top"><span className="eyebrow">A quick visit quiz · {quizStep + 1} of 5</span><button className="text-button" onClick={skipQuiz}>Skip for now</button></div><div className="quiz-progress"><i style={{ width: `${((quizStep + 1) / 5) * 100}%` }}/></div><h1>{q.question}</h1><div className="quiz-options">{q.options.map(([value, label], index) => <button key={value} onClick={() => answerQuiz(value)}><b>{String.fromCharCode(65 + index)}</b><span>{label}</span><i>→</i></button>)}</div><p className="privacy-note">Optional and saved only in your browser.</p></section>) }
