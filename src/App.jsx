@@ -33,6 +33,7 @@ export default function App() {
   const [processing, setProcessing] = useState(false)
   const [cameraActive, setCameraActive] = useState(false)
   const [cameraRequesting, setCameraRequesting] = useState(false)
+  const [cameraReady, setCameraReady] = useState(false)
   const [cameraError, setCameraError] = useState('')
   const [quizStep, setQuizStep] = useState(0)
   const [quizAnswers, setQuizAnswers] = useState({})
@@ -57,10 +58,29 @@ export default function App() {
     mediaStream.current?.getTracks().forEach((track) => track.stop())
     mediaStream.current = null
     if (cameraVideo.current) cameraVideo.current.srcObject = null
+    setCameraReady(false)
     setCameraActive(false)
   }
+  useEffect(() => {
+    const video = cameraVideo.current
+    const stream = mediaStream.current
+    if (!cameraActive || !video || !stream) return undefined
+    let cancelled = false
+    const beginPreview = async () => {
+      try {
+        video.srcObject = stream
+        await video.play()
+        if (!cancelled) setCameraReady(true)
+      } catch {
+        if (!cancelled) setCameraError('Rosie opened the camera, but the live preview could not start. Try again or choose a photo from your device.')
+      }
+    }
+    beginPreview()
+    return () => { cancelled = true }
+  }, [cameraActive])
   const startCamera = async () => {
     setCameraError('')
+    setCameraReady(false)
     if (!navigator.mediaDevices?.getUserMedia) { setCameraError('This browser cannot open a live camera. Choose a photo from your device instead.'); return }
     if (!window.isSecureContext) { setCameraError('Camera access needs HTTPS on a phone. Use the secure deployed site, or choose a photo from your device.'); return }
     setCameraRequesting(true)
@@ -68,10 +88,17 @@ export default function App() {
       stopCamera()
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false })
       mediaStream.current = stream
-      if (cameraVideo.current) { cameraVideo.current.srcObject = stream; await cameraVideo.current.play() }
       setCameraActive(true)
     } catch (error) {
-      const message = error?.name === 'NotAllowedError' ? 'Camera access was not allowed. Turn it on in your browser settings, then try again.' : error?.name === 'NotFoundError' ? 'No camera was found on this device. Choose a photo from your device instead.' : 'Rosie could not open the camera. Try again or choose a photo from your device.'
+      const message = error?.name === 'NotAllowedError' || error?.name === 'SecurityError'
+        ? 'Camera access was not allowed. Allow camera access in your browser’s site settings, then try again.'
+        : error?.name === 'NotFoundError'
+          ? 'No camera was found on this device. Choose a photo from your device instead.'
+          : error?.name === 'NotReadableError'
+            ? 'Another app is using the camera. Close that app, then try again.'
+            : error?.name === 'OverconstrainedError'
+              ? 'Rosie could not use this camera setting. Try again to use your default camera.'
+              : 'Rosie could not open the camera. Try again or choose a photo from your device.'
       setCameraError(message)
     } finally { setCameraRequesting(false) }
   }
@@ -207,7 +234,7 @@ export default function App() {
   if (screen === 'welcome') return shell(<section className="welcome-new"><span className="eyebrow">Your museum, in conversation</span><h1>Meet art with<br/><em>Rosie.</em></h1><p>Photograph an artwork, follow your curiosity, and discover a little more together.</p><div className="welcome-actions"><Primary onClick={() => quizSession ? go('capture') : go('quiz')}>{quizSession ? 'Continue your visit' : 'Personalize my visit'}</Primary><button className="text-button" onClick={skipQuiz}>Skip to artwork chat →</button></div><p className="privacy-note">No tracking user data. Insights on artwork may be referred to other guests.</p></section>)
   if (screen === 'quiz') { const q = quizQuestions[quizStep]; return shell(<section className="quiz"><div className="quiz-top"><span className="eyebrow">A quick visit quiz · {quizStep + 1} of 5</span><button className="text-button" onClick={skipQuiz}>Skip for now</button></div><div className="quiz-progress"><i style={{ width: `${((quizStep + 1) / 5) * 100}%` }}/></div><h1>{q.question}</h1><div className="quiz-options">{q.options.map(([value, label], index) => <button key={value} onClick={() => answerQuiz(value)}><b>{String.fromCharCode(65 + index)}</b><span>{label}</span><i>→</i></button>)}</div><p className="privacy-note">Optional and saved only in your browser.</p></section>) }
   if (screen === 'suggestion') return shell(<section className="suggestion"><span className="eyebrow">A starting point for your visit</span>{suggesting ? <div className="suggestion-loading"><i/><i/><i/><p>Rosie is finding your first stop…</p></div> : <><h1>Here’s where I’d begin.</h1><p>{formatMessage(suggestion)}</p><RoutePlan answers={quizSession}/><Primary onClick={openCapture}>Find an artwork</Primary><button className="text-button" onClick={startOver}>Start quiz over</button></>}</section>)
-  if (screen === 'capture') return shell(<section className="capture"><button className="back" onClick={() => { stopCamera(); go('welcome') }}>← <span>Home</span></button><div className="capture-heading"><span className="eyebrow">Artwork finder</span><h1>Show Rosie the artwork.</h1><p>Use your camera live, or choose a photo already on this device.</p></div><div className={`camera-stage ${processing ? 'processing' : ''}`}><div className={`viewfinder ${cameraActive ? 'camera-live' : ''}`}><video ref={cameraVideo} className={cameraActive ? '' : 'camera-video-hidden'} autoPlay playsInline muted aria-label="Live camera preview"/>{cameraActive ? null : photo ? <img src={photo} alt="Selected artwork"/> : <><span className="corner tl"/><span className="corner tr"/><span className="corner bl"/><span className="corner br"/><RosieMark/></>}</div>{processing && <div className="analyzing"><span>Rosie is identifying the artwork…</span><i/></div>}{cameraError && <p className="camera-error" role="alert">{cameraError}</p>}</div><div className="capture-actions">{cameraActive ? <><button className="camera-btn shutter" onClick={takePhoto} aria-label="Take photo"><i/></button><button className="text-button" onClick={stopCamera}>Stop camera</button></> : <><button className="camera-btn" disabled={cameraRequesting} onClick={startCamera} aria-label="Open camera">⌾</button><div className="capture-choice-row"><button className="outline-button" disabled={cameraRequesting} onClick={startCamera}>{cameraRequesting ? 'Opening camera…' : 'Take a photo'}</button><button className="outline-button" onClick={() => photoInput.current?.click()}>Choose from device</button></div></>}</div></section>)
+  if (screen === 'capture') return shell(<section className="capture"><button className="back" onClick={() => { stopCamera(); go('welcome') }}>← <span>Home</span></button><div className="capture-heading"><span className="eyebrow">Artwork finder</span><h1>Show Rosie the artwork.</h1><p>Use your camera live, or choose a photo already on this device.</p></div><div className={`camera-stage ${processing ? 'processing' : ''}`}><div className={`viewfinder ${cameraActive ? 'camera-live' : ''}`}><video ref={cameraVideo} className={cameraActive ? '' : 'camera-video-hidden'} autoPlay playsInline muted aria-label="Live camera preview"/>{cameraActive ? <span className={`camera-status ${cameraReady ? 'ready' : ''}`}>{cameraReady ? 'Camera ready' : 'Connecting to camera…'}</span> : photo ? <img src={photo} alt="Selected artwork"/> : <><span className="corner tl"/><span className="corner tr"/><span className="corner bl"/><span className="corner br"/><RosieMark/></>}</div>{processing && <div className="analyzing"><span>Rosie is identifying the artwork…</span><i/></div>}{cameraError && <p className="camera-error" role="alert">{cameraError}</p>}</div><div className="capture-actions">{cameraActive ? <><button className="camera-btn shutter" disabled={!cameraReady} onClick={takePhoto} aria-label="Take photo"><i/></button><button className="text-button" onClick={stopCamera}>Stop camera</button></> : <><button className="camera-btn" disabled={cameraRequesting} onClick={startCamera} aria-label="Open camera">⌾</button><div className="capture-choice-row"><button className="outline-button" disabled={cameraRequesting} onClick={startCamera}>{cameraRequesting ? 'Opening camera…' : 'Take a photo'}</button><button className="outline-button" onClick={() => photoInput.current?.click()}>Choose from device</button></div></>}</div></section>)
   if (screen === 'confirm') return shell(<ArtworkConfirmation photo={photo} candidate={candidateArtwork} suggestions={artworkSuggestions} onSuggestion={chooseArtworkSuggestion} onYes={confirmCandidate} onNo={() => { setCandidateArtwork(null); setArtworkSuggestions([]); setResolutionError('') }} manualTitle={manualTitle} setManualTitle={setManualTitle} manualArtist={manualArtist} setManualArtist={setManualArtist} resolving={resolvingArtwork} error={resolutionError} onSubmit={enterArtworkManually} onNewArtwork={openCapture}/>)
   return shell(<Chat photo={photo} artwork={artwork} messages={messages} draft={draft} setDraft={setDraft} sending={sending} sendMessage={sendMessage} words={words} feeling={feeling} setFeeling={setFeeling} addFeeling={addFeeling} feelingDismissed={feelingDismissed} setFeelingDismissed={setFeelingDismissed} feelingStatus={feelingStatus} moderatingFeeling={moderatingFeeling} onNewArtwork={openCapture} onStartOver={startOver} />)
 }
