@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: askrosie-team-13-demo
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: API_MAX_REQUEST_BYTES
+        value: 2500000
+      - key: GROQ_MODEL
+        value: qwen/qwen3.6-27b
+      - key: NVIDIA_NIM_MODEL
+        value: nvidia/nemotron-3.5-lightning-30b-a3b
+      - key: GROQ_API_KEY
+        sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGIN
+        sync: false

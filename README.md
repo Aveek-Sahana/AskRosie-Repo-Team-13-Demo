@@ -58,6 +58,10 @@ This starts a temporary API server if needed, builds the app, tests official-ima
 
 The browser camera uses `getUserMedia`, displays a live preview, and captures the shutter frame into the existing classifier flow. A real phone camera prompt needs an HTTPS URL. See [CAMERA_TESTING.md](CAMERA_TESTING.md) for local and phone testing details.
 
+## Deployment and AI-key security
+
+Use the included [DEPLOYMENT.md](DEPLOYMENT.md) and `render.yaml` to deploy the React app and its server-side `/api/*` routes as one HTTPS service. Provider keys belong only in the host’s encrypted environment secrets; they must never use a `VITE_` prefix.
+
 ## Project layout
 
 - `src/` — React visitor experience and artwork catalog

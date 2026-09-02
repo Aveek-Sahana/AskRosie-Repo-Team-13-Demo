@@ -102,6 +102,21 @@ export default function App() {
       setCameraError(message)
     } finally { setCameraRequesting(false) }
   }
+  const prepareImageForUpload = async (file) => {
+    const source = await createImageBitmap(file)
+    const maxSide = 1600
+    const scale = Math.min(1, maxSide / Math.max(source.width, source.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(source.width * scale))
+    canvas.height = Math.max(1, Math.round(source.height * scale))
+    canvas.getContext('2d', { alpha: false }).drawImage(source, 0, 0, canvas.width, canvas.height)
+    source.close?.()
+    const toJpeg = (quality) => new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality))
+    let blob = await toJpeg(0.84)
+    if (blob && blob.size > 1_700_000) blob = await toJpeg(0.68)
+    if (!blob || blob.size > 2_000_000) throw new Error('image_too_large')
+    return new File([blob], 'rosie-artwork.jpg', { type: 'image/jpeg' })
+  }
   const analyzeImageFile = async (file) => {
     if (!file?.type?.startsWith('image/')) return
     stopCamera()
@@ -115,11 +130,12 @@ export default function App() {
     setFeelingStatus('')
     setProcessing(true)
     try {
+      const uploadFile = await prepareImageForUpload(file)
       const imageDataUrl = await new Promise((resolve, reject) => {
         const reader = new FileReader()
         reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '')
         reader.onerror = reject
-        reader.readAsDataURL(file)
+        reader.readAsDataURL(uploadFile)
       })
       setVisionImage(imageDataUrl)
       const response = await fetch('/api/classify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageDataUrl }) })

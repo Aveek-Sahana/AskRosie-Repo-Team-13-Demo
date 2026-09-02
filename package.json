@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
+    "start": "node server.js",
     "verify:live": "node scripts/verify_live_pipeline.mjs"
   },
   "dependencies": {

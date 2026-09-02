@@ -298,7 +298,7 @@ export default defineConfig(({ mode }) => {
           server.middlewares.use('/api/classify', async (req, res) => {
             if (req.method !== 'POST') { res.statusCode = 405; return res.end('Method not allowed') }
             let body = ''
-            for await (const chunk of req) body += chunk
+            for await (const chunk of req) { body += chunk; if (body.length > 2_500_000) { res.statusCode = 413; return res.end(JSON.stringify({ error: 'That image is too large. Please choose a smaller photo.' })) } }
             try {
               const { imageDataUrl = '' } = JSON.parse(body || '{}')
               const result = await classifyArtwork(imageDataUrl)
@@ -313,7 +313,7 @@ export default defineConfig(({ mode }) => {
           server.middlewares.use('/api/resolve-artwork', async (req, res) => {
             if (req.method !== 'POST') { res.statusCode = 405; return res.end('Method not allowed') }
             let body = ''
-            for await (const chunk of req) body += chunk
+            for await (const chunk of req) { body += chunk; if (body.length > 2_500_000) { res.statusCode = 413; return res.end(JSON.stringify({ error: 'That image is too large. Please choose a smaller photo.' })) } }
             try {
               const { title = '', artist = '' } = JSON.parse(body || '{}')
               const result = await resolveArtworkWithRosie(title, artist)
@@ -328,7 +328,7 @@ export default defineConfig(({ mode }) => {
           server.middlewares.use('/api/moderate-word', async (req, res) => {
             if (req.method !== 'POST') { res.statusCode = 405; return res.end('Method not allowed') }
             let body = ''
-            for await (const chunk of req) body += chunk
+            for await (const chunk of req) { body += chunk; if (body.length > 2_500_000) { res.statusCode = 413; return res.end(JSON.stringify({ error: 'That image is too large. Please choose a smaller photo.' })) } }
             try {
               const { word = '' } = JSON.parse(body || '{}')
               const result = await moderateCommunityWord(String(word).trim())
@@ -343,7 +343,7 @@ export default defineConfig(({ mode }) => {
           server.middlewares.use('/api/chat', async (req, res) => {
             if (req.method !== 'POST') { res.statusCode = 405; return res.end('Method not allowed') }
             let body = ''
-            for await (const chunk of req) body += chunk
+            for await (const chunk of req) { body += chunk; if (body.length > 2_500_000) { res.statusCode = 413; return res.end(JSON.stringify({ error: 'That image is too large. Please choose a smaller photo.' })) } }
             try {
               const { messages = [], mode: requestMode = 'artwork', quizAnswers = null, imageDataUrl = '', identifiedArtwork = null } = JSON.parse(body || '{}')
               if (!chatProviders.length) { res.statusCode = 503; return res.end(JSON.stringify({ error: 'No server-side LLM API key is configured.' })) }
