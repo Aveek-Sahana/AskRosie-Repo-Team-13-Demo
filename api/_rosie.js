@@ -8,8 +8,8 @@ const limits = new Map()
 export function apiGuard(req, res, { limit = 30, windowMs = 600_000 } = {}) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed.' }); return false }
   const origin = req.headers.origin
-  const allowedOrigin = process.env.ALLOWED_ORIGIN
-  if (allowedOrigin && origin && origin !== allowedOrigin) { res.status(403).json({ error: 'Request origin is not allowed.' }); return false }
+  const allowedOrigin = process.env.ALLOWED_ORIGIN || (req.headers.host ? `https://${req.headers.host}` : '')
+  if (origin && allowedOrigin && origin !== allowedOrigin) { res.status(403).json({ error: 'Request origin is not allowed.' }); return false }
   const address = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim()
   const key = `${req.url}:${address}`; const now = Date.now(); const previous = limits.get(key)
   const record = !previous || now >= previous.resetAt ? { count: 0, resetAt: now + windowMs } : previous
